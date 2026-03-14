@@ -2,7 +2,7 @@
 
   <div class="container-fluid">
 
-    <a class="navbar-brand" href="#">
+    <a class="navbar-brand" href="./">
         <img src="./public/logo.jpg" alt="Logo" width="125px" height="80px">
     </a>
 
