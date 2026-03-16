@@ -2,7 +2,7 @@
 
   <div class="container-fluid">
 
-    <a class="navbar-brand" href="#">
+    <a class="navbar-brand" href="./">
         <img src="./public/logo.jpg" alt="Logo" width="125px" height="80px">
     </a>
 
@@ -21,12 +21,20 @@
         <li class="nav-item">
           <a class="nav-link text-white" href="#">Latest Q&A</a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link text-white" href="?login=true">Login</a>
-        </li>
-        <li class="nav-item text-white">
-          <a class="nav-link text-white" href="?signup=true">SignUp</a>
-        </li>
+
+
+            <li class="nav-item">
+              <a class="nav-link text-white" href="?login=true">Login</a>
+            </li>
+            <li class="nav-item text-white">
+              <a class="nav-link text-white" href="?signup=true">SignUp</a>
+            </li>
+
+
+
+
+
+
 
       </ul>
     </div>
