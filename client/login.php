@@ -1,13 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Login Form</title>
-  <link rel="stylesheet" href="./public/style.css" />
-</head>
-<body class="SignUp-form">
-
-  <div class="signup-wrapper">
+<div class="signup-wrapper">
     <div class="video-container">
       <iframe
           width="700" height="550"
@@ -51,7 +42,4 @@
         Don't have an account? <a href="?signup=true" style="color:#5cb85c;">Sign Up</a>
       </p>
     </div>
-  </div>
-
-</body>
-</html>
+</div>
