@@ -6,28 +6,14 @@ $isLoggedIn = !empty($_SESSION["user_id"]);
 $userId = $isLoggedIn ? $_SESSION["user_id"] : null;
 $error = "";
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['post_question'])) {
-    if ($isLoggedIn) {
-        $question = trim($_POST['question']);
-        if (!empty($question)) {
-            $stmt = $conn->prepare("INSERT INTO `qa_posts` (`user_id`, `question`) VALUES (?, ?)");
-            if ($stmt) {
-                $stmt->bind_param("is", $userId, $question);
-                if ($stmt->execute()) {
-                    $stmt->close();
-                    // Redirect to prevent form resubmission
-                    header("Location: index.php?qa=true");
-                    exit();
-                } else {
-                    $error = "Failed to post your question. Please try again.";
-                }
-            }
-        } else {
-            $error = "Question cannot be empty.";
-        }
-    } else {
+// Error processing
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["post_question"])) {
+    if (!$isLoggedIn) {
         $error = "You must be logged in to post.";
+    } elseif (empty(trim($_POST["question"]))) {
+        $error = "Question cannot be empty.";
+    } else {
+        $error = "Failed to post your question. Please try again.";
     }
 }
 
@@ -59,7 +45,9 @@ if ($result && $result->num_rows > 0) {
         <div class="qa-form-container">
             <?php if ($isLoggedIn): ?>
                 <?php if ($error): ?>
-                    <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
+                    <div class="alert alert-error"><?php echo htmlspecialchars(
+                        $error,
+                    ); ?></div>
                 <?php endif; ?>
                 <form action="index.php?qa=true" method="POST" class="qa-form">
                     <textarea
@@ -69,7 +57,9 @@ if ($result && $result->num_rows > 0) {
                         rows="3"
                     ></textarea>
                     <div class="form-footer">
-                        <span class="user-badge">Posting as: <strong><?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?></strong></span>
+                        <span class="user-badge">Posting as: <strong><?php echo htmlspecialchars(
+                            $_SESSION["username"] ?? "User",
+                        ); ?></strong></span>
                         <button type="submit" name="post_question" class="btn-post">Post Message</button>
                     </div>
                 </form>
@@ -95,15 +85,24 @@ if ($result && $result->num_rows > 0) {
                 <?php foreach ($posts as $post): ?>
                     <div class="post-card">
                         <div class="post-avatar">
-                            <?php echo strtoupper(substr($post['username'], 0, 1)); ?>
+                            <?php echo strtoupper(
+                                substr($post["username"], 0, 1),
+                            ); ?>
                         </div>
                         <div class="post-body">
                             <div class="post-meta">
-                                <span class="post-author"><?php echo htmlspecialchars($post['username']); ?></span>
-                                <span class="post-time"><?php echo date("M j, Y • g:i a", strtotime($post['created_at'])); ?></span>
+                                <span class="post-author"><?php echo htmlspecialchars(
+                                    $post["username"],
+                                ); ?></span>
+                                <span class="post-time"><?php echo date(
+                                    "M j, Y • g:i a",
+                                    strtotime($post["created_at"]),
+                                ); ?></span>
                             </div>
                             <div class="post-text">
-                                <?php echo nl2br(htmlspecialchars($post['question'])); ?>
+                                <?php echo nl2br(
+                                    htmlspecialchars($post["question"]),
+                                ); ?>
                             </div>
                         </div>
                     </div>
