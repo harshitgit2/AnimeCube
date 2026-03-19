@@ -12,14 +12,14 @@
           <a class="nav-link active text-white" aria-current="page" href="./">Home</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-white" href="#">Features</a>
+          <a class="nav-link text-white" href="?features=true">Features</a>
         </li>
 
         <li class="nav-item">
-          <a class="nav-link text-white" href="#">Category</a>
+          <a class="nav-link text-white" href="?category=true">Category</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-white" href="#">Latest Q&A</a>
+          <a class="nav-link text-white" href="?qa=true">Latest Q&A</a>
         </li>
 
         <?php if (!empty($_SESSION["user_id"])) { ?>

@@ -196,6 +196,12 @@ if (isset($_GET["login"])) {
     } elseif (isset($_GET["signup"])) {
         // Show signup page
         include "client/signup.php";
+    } elseif (isset($_GET["features"])) {
+        include "client/Features.php";
+    } elseif (isset($_GET["category"])) {
+        include "client/Category.php";
+    } elseif (isset($_GET["qa"])) {
+        include "client/QA.php";
     } elseif (isset($_GET["content"])) {
         // Show detailed content page (only if logged in)
         if (!empty($_SESSION["user_id"])) {

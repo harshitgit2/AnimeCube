@@ -1,6 +1,7 @@
 <?php
 // Content.php - Detailed anime information page
 // This file displays comprehensive information about a specific anime
+// Dynamically fetches from MyAnimeList if requested
 
 // Check if anime ID is provided
 if (!isset($_GET["content"]) || empty($_GET["content"])) {
@@ -8,23 +9,208 @@ if (!isset($_GET["content"]) || empty($_GET["content"])) {
     exit();
 }
 
-$anime_id = intval($_GET["content"]);
-
-// Fetch anime details from database
 include_once "./Database/db.php";
 
-$stmt = $conn->prepare("SELECT * FROM `anime` WHERE `id` = ? LIMIT 1");
-$stmt->bind_param("i", $anime_id);
-$stmt->execute();
-$result = $stmt->get_result();
+$anime = null;
+$anime_id = intval($_GET["content"]);
+$is_mal = isset($_GET["source"]) && $_GET["source"] === "mal";
 
-if ($result->num_rows === 0) {
-    echo "<div class='error-message'>Anime not found.</div>";
+if ($is_mal) {
+    // Fetch from Jikan API
+    $api_url = "https://api.jikan.moe/v4/anime/" . $anime_id . "/full";
+
+    // We use stream context to set timeout and user agent
+    $context = stream_context_create([
+        "http" => [
+            "timeout" => 5,
+            "user_agent" => "AnimeCube/1.0",
+        ],
+    ]);
+
+    $json = @file_get_contents($api_url, false, $context);
+
+    if ($json) {
+        $data = json_decode($json, true);
+        if (isset($data["data"])) {
+            $mal_data = $data["data"];
+
+            // Map MAL data to our structure
+            $title = $mal_data["title"] ?? "Unknown";
+
+            // Check if it already exists in our DB by title to get the local ID
+            $stmt = $conn->prepare(
+                "SELECT * FROM `anime` WHERE `title` = ? LIMIT 1",
+            );
+            $stmt->bind_param("s", $title);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($result->num_rows > 0) {
+                $anime = $result->fetch_assoc();
+            } else {
+                // Insert into our DB so foreign keys for favorites and watchlist work
+                $title_eng = $mal_data["title_english"] ?? null;
+                $title_jap = $mal_data["title_japanese"] ?? null;
+                $image =
+                    $mal_data["images"]["webp"]["large_image_url"] ??
+                    ($mal_data["images"]["jpg"]["image_url"] ?? "");
+                $description =
+                    $mal_data["synopsis"] ?? "No description available.";
+                $synopsis = $description;
+
+                $allowed_types = ["TV", "Movie", "OVA", "ONA", "Special"];
+                $type =
+                    isset($mal_data["type"]) &&
+                    in_array($mal_data["type"], $allowed_types)
+                        ? $mal_data["type"]
+                        : "TV";
+
+                $episodes = $mal_data["episodes"] ?? 0;
+
+                $status_map = [
+                    "Currently Airing" => "Airing",
+                    "Finished Airing" => "Finished Airing",
+                    "Not yet aired" => "Not yet aired",
+                ];
+                $status =
+                    isset($mal_data["status"]) &&
+                    isset($status_map[$mal_data["status"]])
+                        ? $status_map[$mal_data["status"]]
+                        : "Finished Airing";
+
+                $aired_from = !empty($mal_data["aired"]["from"])
+                    ? date("Y-m-d", strtotime($mal_data["aired"]["from"]))
+                    : null;
+                $aired_to = !empty($mal_data["aired"]["to"])
+                    ? date("Y-m-d", strtotime($mal_data["aired"]["to"]))
+                    : null;
+
+                $premiered =
+                    isset($mal_data["season"]) && isset($mal_data["year"])
+                        ? ucfirst($mal_data["season"]) . " " . $mal_data["year"]
+                        : null;
+                $broadcast = $mal_data["broadcast"]["string"] ?? null;
+
+                $producers = isset($mal_data["producers"])
+                    ? implode(
+                        ", ",
+                        array_column($mal_data["producers"], "name"),
+                    )
+                    : null;
+                $licensors = isset($mal_data["licensors"])
+                    ? implode(
+                        ", ",
+                        array_column($mal_data["licensors"], "name"),
+                    )
+                    : null;
+                $studios = isset($mal_data["studios"])
+                    ? implode(", ", array_column($mal_data["studios"], "name"))
+                    : null;
+                $source = $mal_data["source"] ?? null;
+                $genres = isset($mal_data["genres"])
+                    ? implode(", ", array_column($mal_data["genres"], "name"))
+                    : null;
+                $themes = isset($mal_data["themes"])
+                    ? implode(", ", array_column($mal_data["themes"], "name"))
+                    : null;
+                $demographic = isset($mal_data["demographics"])
+                    ? implode(
+                        ", ",
+                        array_column($mal_data["demographics"], "name"),
+                    )
+                    : null;
+
+                $duration = $mal_data["duration"] ?? null;
+                $rating = $mal_data["rating"] ?? null;
+                $score = $mal_data["score"] ?? 0.0;
+                $scored_by = $mal_data["scored_by"] ?? 0;
+                $rank = $mal_data["rank"] ?? null;
+                $popularity = $mal_data["popularity"] ?? null;
+                $members = $mal_data["members"] ?? 0;
+                $favorites = $mal_data["favorites"] ?? 0;
+                $trailer_url = $mal_data["trailer"]["embed_url"] ?? null;
+
+                // Insert query
+                $insert_query = "INSERT INTO `anime` (
+                    `title`, `title_english`, `title_japanese`, `image`, `description`, `synopsis`,
+                    `type`, `episodes`, `status`, `aired_from`, `aired_to`, `premiered`, `broadcast`,
+                    `producers`, `licensors`, `studios`, `source`, `genres`, `themes`, `demographic`,
+                    `duration`, `rating`, `score`, `scored_by`, `rank`, `popularity`, `members`, `favorites`, `trailer_url`
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+                $stmt_in = $conn->prepare($insert_query);
+                if ($stmt_in) {
+                    $stmt_in->bind_param(
+                        "sssssssissssssssssssssdiiiiis",
+                        $title,
+                        $title_eng,
+                        $title_jap,
+                        $image,
+                        $description,
+                        $synopsis,
+                        $type,
+                        $episodes,
+                        $status,
+                        $aired_from,
+                        $aired_to,
+                        $premiered,
+                        $broadcast,
+                        $producers,
+                        $licensors,
+                        $studios,
+                        $source,
+                        $genres,
+                        $themes,
+                        $demographic,
+                        $duration,
+                        $rating,
+                        $score,
+                        $scored_by,
+                        $rank,
+                        $popularity,
+                        $members,
+                        $favorites,
+                        $trailer_url,
+                    );
+                    if ($stmt_in->execute()) {
+                        $new_id = $stmt_in->insert_id;
+
+                        // Fetch the newly inserted anime
+                        $stmt_fetch = $conn->prepare(
+                            "SELECT * FROM `anime` WHERE `id` = ?",
+                        );
+                        $stmt_fetch->bind_param("i", $new_id);
+                        $stmt_fetch->execute();
+                        $anime = $stmt_fetch->get_result()->fetch_assoc();
+                        $stmt_fetch->close();
+                    }
+                    $stmt_in->close();
+                }
+            }
+            $stmt->close();
+        }
+    }
+}
+
+// If not MAL source or fetching failed, try fetching from local DB by ID
+if (!$anime) {
+    $stmt = $conn->prepare("SELECT * FROM `anime` WHERE `id` = ? LIMIT 1");
+    $stmt->bind_param("i", $anime_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $anime = $result->fetch_assoc();
+    }
+    $stmt->close();
+}
+
+if (!$anime) {
+    echo "<div class='error-message'>Anime not found. Could not load from MyAnimeList or local database. Please try again later.</div>";
     exit();
 }
 
-$anime = $result->fetch_assoc();
-$stmt->close();
+// Use the local DB ID for favorites/watchlist
+$local_anime_id = $anime["id"];
 
 // Check if user has added to favorites or watchlist (if logged in)
 $is_favorite = false;
@@ -37,7 +223,7 @@ if (!empty($_SESSION["user_id"])) {
     $fav_stmt = $conn->prepare(
         "SELECT * FROM `user_favorites` WHERE `user_id` = ? AND `anime_id` = ? LIMIT 1",
     );
-    $fav_stmt->bind_param("ii", $user_id, $anime_id);
+    $fav_stmt->bind_param("ii", $user_id, $local_anime_id);
     $fav_stmt->execute();
     $fav_result = $fav_stmt->get_result();
     $is_favorite = $fav_result->num_rows > 0;
@@ -47,7 +233,7 @@ if (!empty($_SESSION["user_id"])) {
     $watch_stmt = $conn->prepare(
         "SELECT `status`, `episodes_watched`, `score` FROM `user_watchlist` WHERE `user_id` = ? AND `anime_id` = ? LIMIT 1",
     );
-    $watch_stmt->bind_param("ii", $user_id, $anime_id);
+    $watch_stmt->bind_param("ii", $user_id, $local_anime_id);
     $watch_stmt->execute();
     $watch_result = $watch_stmt->get_result();
     if ($watch_result->num_rows > 0) {
@@ -78,27 +264,33 @@ if (!empty($_SESSION["user_id"])) {
                     $anime["title"],
                 ); ?></h1>
 
-                <?php if ($anime["title_english"]): ?>
+                <?php if (!empty($anime["title_english"])): ?>
                     <h2 class="content-subtitle"><?php echo htmlspecialchars(
                         $anime["title_english"],
                     ); ?></h2>
                 <?php endif; ?>
 
-                <?php if ($anime["title_japanese"]): ?>
+                <?php if (!empty($anime["title_japanese"])): ?>
                     <h3 class="content-subtitle-jp"><?php echo htmlspecialchars(
                         $anime["title_japanese"],
                     ); ?></h3>
                 <?php endif; ?>
 
                 <div class="content-rating">
-                    <?php if ($anime["score"] > 0): ?>
+                    <?php if (
+                        !empty($anime["score"]) &&
+                        $anime["score"] > 0
+                    ): ?>
                         <div class="score-large">
                             <span class="score-icon">⭐</span>
                             <span class="score-number"><?php echo number_format(
                                 $anime["score"],
                                 2,
                             ); ?></span>
-                            <?php if ($anime["scored_by"] > 0): ?>
+                            <?php if (
+                                !empty($anime["scored_by"]) &&
+                                $anime["scored_by"] > 0
+                            ): ?>
                                 <span class="score-users">(<?php echo number_format(
                                     $anime["scored_by"],
                                 ); ?> users)</span>
@@ -106,13 +298,13 @@ if (!empty($_SESSION["user_id"])) {
                         </div>
                     <?php endif; ?>
 
-                    <?php if ($anime["rank"]): ?>
+                    <?php if (!empty($anime["rank"])): ?>
                         <div class="rank-badge">Rank #<?php echo number_format(
                             $anime["rank"],
                         ); ?></div>
                     <?php endif; ?>
 
-                    <?php if ($anime["popularity"]): ?>
+                    <?php if (!empty($anime["popularity"])): ?>
                         <div class="popularity-badge">Popularity #<?php echo number_format(
                             $anime["popularity"],
                         ); ?></div>
@@ -124,9 +316,7 @@ if (!empty($_SESSION["user_id"])) {
                     <div class="user-actions">
                         <button class="btn-action <?php echo $is_favorite
                             ? "active"
-                            : ""; ?>" id="favoriteBtn" data-anime-id="<?php echo $anime[
-    "id"
-]; ?>">
+                            : ""; ?>" id="favoriteBtn" data-anime-id="<?php echo $local_anime_id; ?>">
                             <span class="icon">❤️</span> <?php echo $is_favorite
                                 ? "Remove from Favorites"
                                 : "Add to Favorites"; ?>
@@ -152,7 +342,7 @@ if (!empty($_SESSION["user_id"])) {
         <div class="content-section">
             <h2 class="section-title">Synopsis</h2>
             <div class="synopsis-text">
-                <?php echo $anime["synopsis"]
+                <?php echo !empty($anime["synopsis"])
                     ? nl2br(htmlspecialchars($anime["synopsis"]))
                     : nl2br(htmlspecialchars($anime["description"])); ?>
             </div>
@@ -162,7 +352,7 @@ if (!empty($_SESSION["user_id"])) {
         <div class="content-section">
             <h2 class="section-title">Information</h2>
             <div class="info-grid">
-                <?php if ($anime["type"]): ?>
+                <?php if (!empty($anime["type"])): ?>
                     <div class="info-item">
                         <span class="info-label">Type:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -171,7 +361,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["episodes"]): ?>
+                <?php if (!empty($anime["episodes"])): ?>
                     <div class="info-item">
                         <span class="info-label">Episodes:</span>
                         <span class="info-value"><?php echo $anime[
@@ -180,7 +370,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["status"]): ?>
+                <?php if (!empty($anime["status"])): ?>
                     <div class="info-item">
                         <span class="info-label">Status:</span>
                         <span class="info-value status-badge-<?php echo strtolower(
@@ -191,7 +381,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["aired_from"]): ?>
+                <?php if (!empty($anime["aired_from"])): ?>
                     <div class="info-item">
                         <span class="info-label">Aired:</span>
                         <span class="info-value">
@@ -199,7 +389,7 @@ if (!empty($_SESSION["user_id"])) {
                                 "M d, Y",
                                 strtotime($anime["aired_from"]),
                             ); ?>
-                            <?php if ($anime["aired_to"]): ?>
+                            <?php if (!empty($anime["aired_to"])): ?>
                                 to <?php echo date(
                                     "M d, Y",
                                     strtotime($anime["aired_to"]),
@@ -211,7 +401,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["premiered"]): ?>
+                <?php if (!empty($anime["premiered"])): ?>
                     <div class="info-item">
                         <span class="info-label">Premiered:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -220,7 +410,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["broadcast"]): ?>
+                <?php if (!empty($anime["broadcast"])): ?>
                     <div class="info-item">
                         <span class="info-label">Broadcast:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -229,7 +419,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["producers"]): ?>
+                <?php if (!empty($anime["producers"])): ?>
                     <div class="info-item">
                         <span class="info-label">Producers:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -238,7 +428,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["licensors"]): ?>
+                <?php if (!empty($anime["licensors"])): ?>
                     <div class="info-item">
                         <span class="info-label">Licensors:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -247,7 +437,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["studios"]): ?>
+                <?php if (!empty($anime["studios"])): ?>
                     <div class="info-item">
                         <span class="info-label">Studios:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -256,7 +446,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["source"]): ?>
+                <?php if (!empty($anime["source"])): ?>
                     <div class="info-item">
                         <span class="info-label">Source:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -265,7 +455,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["genres"]): ?>
+                <?php if (!empty($anime["genres"])): ?>
                     <div class="info-item">
                         <span class="info-label">Genres:</span>
                         <span class="info-value">
@@ -281,7 +471,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["themes"]): ?>
+                <?php if (!empty($anime["themes"])): ?>
                     <div class="info-item">
                         <span class="info-label">Themes:</span>
                         <span class="info-value">
@@ -297,7 +487,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["demographic"]): ?>
+                <?php if (!empty($anime["demographic"])): ?>
                     <div class="info-item">
                         <span class="info-label">Demographic:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -306,7 +496,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["duration"]): ?>
+                <?php if (!empty($anime["duration"])): ?>
                     <div class="info-item">
                         <span class="info-label">Duration:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -315,7 +505,7 @@ if (!empty($_SESSION["user_id"])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($anime["rating"]): ?>
+                <?php if (!empty($anime["rating"])): ?>
                     <div class="info-item">
                         <span class="info-label">Rating:</span>
                         <span class="info-value"><?php echo htmlspecialchars(
@@ -327,11 +517,11 @@ if (!empty($_SESSION["user_id"])) {
         </div>
 
         <!-- Statistics Section -->
-        <?php if ($anime["members"] || $anime["favorites"]): ?>
+        <?php if (!empty($anime["members"]) || !empty($anime["favorites"])): ?>
             <div class="content-section">
                 <h2 class="section-title">Statistics</h2>
                 <div class="stats-grid">
-                    <?php if ($anime["members"]): ?>
+                    <?php if (!empty($anime["members"])): ?>
                         <div class="stat-item">
                             <div class="stat-label">Members</div>
                             <div class="stat-value"><?php echo number_format(
@@ -340,7 +530,7 @@ if (!empty($_SESSION["user_id"])) {
                         </div>
                     <?php endif; ?>
 
-                    <?php if ($anime["favorites"]): ?>
+                    <?php if (!empty($anime["favorites"])): ?>
                         <div class="stat-item">
                             <div class="stat-label">Favorites</div>
                             <div class="stat-value"><?php echo number_format(
@@ -353,7 +543,7 @@ if (!empty($_SESSION["user_id"])) {
         <?php endif; ?>
 
         <!-- Trailer Section -->
-        <?php if ($anime["trailer_url"]): ?>
+        <?php if (!empty($anime["trailer_url"])): ?>
             <div class="content-section">
                 <h2 class="section-title">Trailer</h2>
                 <div class="trailer-wrapper">
@@ -368,10 +558,59 @@ if (!empty($_SESSION["user_id"])) {
                 </div>
             </div>
         <?php endif; ?>
+
+        <!-- Recommendations Section -->
+        <div class="content-section">
+            <h2 class="section-title">Recommendations</h2>
+            <div class="recommendations-grid" id="recommendations-container">
+                <div class="loading-spinner" style="text-align:center; padding: 20px; font-style: italic; color: #666;">Loading recommendations...</div>
+            </div>
+        </div>
     </div>
 </div>
 
 <style>
+.recommendations-grid {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 15px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.recommendations-grid::-webkit-scrollbar {
+    display: none;
+}
+.recommendation-card {
+    min-width: 150px;
+    max-width: 150px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.2s;
+    background: white;
+    flex-shrink: 0;
+}
+.recommendation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.recommendation-img {
+    width: 100%;
+    height: 210px;
+    object-fit: cover;
+}
+.recommendation-title {
+    padding: 10px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #333;
+}
 .content-page {
     width: 100%;
     min-height: 100vh;
@@ -387,7 +626,7 @@ if (!empty($_SESSION["user_id"])) {
 .btn-back {
     display: inline-block;
     padding: 8px 16px;
-    background: #5cb85c;
+    background: #667eea;
     color: white;
     text-decoration: none;
     border-radius: 5px;
@@ -396,7 +635,7 @@ if (!empty($_SESSION["user_id"])) {
 }
 
 .btn-back:hover {
-    background: #4cae4c;
+    background: #5568d3;
 }
 
 .content-hero {
@@ -490,7 +729,7 @@ if (!empty($_SESSION["user_id"])) {
 
 .btn-action {
     padding: 12px 24px;
-    background: #5cb85c;
+    background: #667eea;
     color: white;
     border: none;
     border-radius: 6px;
@@ -504,7 +743,7 @@ if (!empty($_SESSION["user_id"])) {
 }
 
 .btn-action:hover {
-    background: #4cae4c;
+    background: #5568d3;
 }
 
 .btn-action.active {
@@ -535,7 +774,7 @@ if (!empty($_SESSION["user_id"])) {
     color: #333;
     margin: 0 0 20px 0;
     padding-bottom: 10px;
-    border-bottom: 3px solid #5cb85c;
+    border-bottom: 3px solid #667eea;
 }
 
 .synopsis-text {
@@ -639,6 +878,7 @@ if (!empty($_SESSION["user_id"])) {
     text-align: center;
     font-size: 18px;
     color: #d9534f;
+    font-weight: bold;
 }
 
 @media (max-width: 768px) {
@@ -716,7 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Watchlist button - for now just show alert (can be expanded to modal)
     if (watchlistBtn) {
         watchlistBtn.addEventListener('click', function() {
-            const animeId = <?php echo $anime["id"]; ?>;
+            const animeId = <?php echo $local_anime_id; ?>;
             const currentStatus = '<?php echo $watchlist_status
                 ? $watchlist_status["status"]
                 : "Plan to Watch"; ?>';
@@ -785,6 +1025,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Failed to update watchlist. Please try again.');
             });
         });
+    }
+});
+
+// Fetch Recommendations
+document.addEventListener('DOMContentLoaded', function() {
+    const malId = <?php echo $is_mal ? $anime_id : "null"; ?>;
+
+    // If we have a MAL ID, we can fetch recommendations directly
+    if (malId) {
+        fetchRecommendations(malId);
+    } else {
+        document.getElementById('recommendations-container').innerHTML = '<div style="padding: 20px; color: #666; text-align: center;">Recommendations not available for local-only anime.</div>';
+    }
+
+    function fetchRecommendations(id) {
+        fetch('https://api.jikan.moe/v4/anime/' + id + '/recommendations')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('recommendations-container');
+                container.innerHTML = '';
+
+                if (data.data && data.data.length > 0) {
+                    const recs = data.data.slice(0, 15); // show top 15
+                    recs.forEach(rec => {
+                        const anime = rec.entry;
+                        const card = document.createElement('div');
+                        card.className = 'recommendation-card';
+                        card.onclick = () => window.location.href = '?content=' + anime.mal_id + '&source=mal';
+
+                        card.innerHTML = `
+                            <img src="${anime.images.webp.image_url}" alt="${anime.title}" class="recommendation-img" loading="lazy">
+                            <div class="recommendation-title" title="${anime.title}">${anime.title}</div>
+                        `;
+                        container.appendChild(card);
+                    });
+                } else {
+                    container.innerHTML = '<div style="padding: 20px; color: #666; text-align: center;">No recommendations found.</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching recommendations:', error);
+                document.getElementById('recommendations-container').innerHTML = '<div style="padding: 20px; color: #d9534f; text-align: center;">Failed to load recommendations.</div>';
+            });
     }
 });
 </script>
