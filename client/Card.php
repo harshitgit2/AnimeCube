@@ -1,7 +1,10 @@
-<?php
+
+<?php // Card.php - MyAnimeList API dynamic categories component
 // Card.php - MyAnimeList API dynamic categories component
 // Checks if the user is logged in for routing
+
 $isLoggedIn = !empty($_SESSION["user_id"]) ? "true" : "false"; ?>
+
 
 <div class="mal-categories-container">
 
