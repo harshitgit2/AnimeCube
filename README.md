@@ -6,10 +6,14 @@
 
 ### 🔓 Public Features (Before Login)
 - Browse anime cards with images, titles, descriptions, and ratings
+- **Advanced Search & Filtering**:
+  - Search by title, description, or keywords
+  - Filter by genre, status, and content type
+  - Sort by rating, popularity, title, or date
+  - Real-time search with instant results
 - View anime quotes fetched from live API (auto-refreshes every 5 minutes)
 - Beautiful, responsive card-based layout
-- Search and filter anime collection
-
+ 
 ### 🔐 User Features (After Login)
 - **Detailed Anime Information** - View comprehensive details similar to MyAnimeList:
   - Synopsis and full description
