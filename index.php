@@ -1,11 +1,35 @@
 <?php
 session_start();
+include_once "Database/db.php";
 
 // Handle logout
 if (isset($_GET["logout"])) {
     session_destroy();
     header("Location: index.php");
     exit();
+}
+
+// Handle Q&A form submission before any HTML output
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["post_question"])) {
+    $isLoggedIn = !empty($_SESSION["user_id"]);
+    $userId = $isLoggedIn ? $_SESSION["user_id"] : null;
+
+    if ($isLoggedIn) {
+        $question = trim($_POST["question"]);
+        if (!empty($question)) {
+            $stmt = $conn->prepare(
+                "INSERT INTO `qa_posts` (`user_id`, `question`) VALUES (?, ?)",
+            );
+            if ($stmt) {
+                $stmt->bind_param("is", $userId, $question);
+                if ($stmt->execute()) {
+                    $stmt->close();
+                    header("Location: index.php?qa=true");
+                    exit();
+                }
+            }
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -196,6 +220,12 @@ if (isset($_GET["login"])) {
     } elseif (isset($_GET["signup"])) {
         // Show signup page
         include "client/signup.php";
+    } elseif (isset($_GET["features"])) {
+        include "client/Features.php";
+    } elseif (isset($_GET["category"])) {
+        include "client/Category.php";
+    } elseif (isset($_GET["qa"])) {
+        include "client/QA.php";
     } elseif (isset($_GET["content"])) {
         // Show detailed content page (only if logged in)
         if (!empty($_SESSION["user_id"])) {
