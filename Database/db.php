@@ -3,7 +3,7 @@
 // $username = "if0_41332525";
 // $password = "siZgdyZB5Uvgo5m";
 // $dbname = "if0_41332525_anime_cube";
-
+//testing purpose
 $host = "localhost";
 $username = "root";
 $password = "";
