@@ -29,12 +29,10 @@
       </ul>
 
       <!-- Search Bar -->
-      <form class="d-flex mx-1" role="search">
+      <form class="d-flex mx-3" role="search">
         <input class="form-control me-2" type="search" placeholder="Search anime..." aria-label="Search">
-        <button class="btn btn-outline-light mx-1" type="submit">
-          <i class="fas fa-search">
-              <img src="./public/search.svg" alt="Search" width="24" height="24">
-          </i>
+        <button class="btn btn-outline-light" type="submit">
+          <i class="fas fa-search"></i>
         </button>
       </form>
 
@@ -44,30 +42,26 @@
         <!-- Dark/Light Mode Toggle -->
         <li class="nav-item">
           <button class="btn btn-outline-light btn-sm" id="themeToggle" title="Toggle theme">
-            <i class="fas fa-moon" id="themeIcon">
-                <img src="./public/moon.svg" alt="Moon" width="24" height="24">
-            </i>
+            <i class="fas fa-moon" id="themeIcon"></i>
           </button>
         </li>
 
         <!-- Notifications -->
-        <!--<li class="nav-item">
+        <li class="nav-item">
           <button class="btn btn-outline-light btn-sm position-relative" title="Notifications">
             <i class="fas fa-bell"></i>
             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
               3
             </span>
           </button>
-        </li>-->
+        </li>
 
         <!-- User Profile Dropdown -->
         <?php if (!empty($_SESSION["user_id"])) { ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle text-white d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
               <img src="./public/default-avatar.png" alt="Avatar" width="32" height="32" class="rounded-circle border border-light">
-              <span><?php echo htmlspecialchars(
-                  $_SESSION["username"] ?? "User",
-              ); ?></span>
+              <span><?php echo htmlspecialchars($_SESSION["username"] ?? "User"); ?></span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
               <li><a class="dropdown-item" href="?profile=true"><i class="fas fa-user me-2"></i>Profile</a></li>
@@ -93,7 +87,7 @@
   </div>
 </nav>
 
-
+ 
 <!-- Dark/Light Mode Script -->
 <script>
   const themeToggle = document.getElementById('themeToggle');
@@ -127,7 +121,7 @@
   body.light-mode .navbar-brand {
     color: hsl(0, 0%, 0%) !important;
   }
-
+  
 
   /* Hover effect on navbar links */
   .navbar a:hover {

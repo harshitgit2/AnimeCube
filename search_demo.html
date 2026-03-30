@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnimeCube Search & Filter Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .demo-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .demo-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .demo-header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* Search and Filter Section */
+        .search-filter-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .search-filter-form {
+            width: 100%;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .search-input-group {
+            flex: 1;
+            position: relative;
+            display: flex;
+            max-width: 500px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 45px 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #5cb85c;
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #5cb85c;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .clear-filters-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .filter-select {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        /* Results Section */
+        .results-section {
+            margin-top: 30px;
+        }
+
+        .results-summary {
+            background: #e8f5e8;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border-left: 4px solid #5cb85c;
+            margin-bottom: 20px;
+        }
+
+        .sample-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .sample-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+
+        .sample-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+
+        .sample-card-content {
+            padding: 15px;
+        }
+
+        .sample-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .sample-card p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .features-list {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .features-list h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .features-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-icon {
+            display: inline-block;
+            width: 20px;
+            margin-right: 10px;
+            font-weight: bold;
+            color: #5cb85c;
+        }
+
+        @media (max-width: 768px) {
+            .search-row {
+                flex-direction: column;
+            }
+
+            .filter-row {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                width: 100%;
+                min-width: unset;
+            }
+
+            .sample-results {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>🎬 AnimeCube Search & Filtering Demo</h1>
+            <p>This demonstrates the new search and filtering functionality added to AnimeCube</p>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="search-filter-section">
+            <form class="search-filter-form">
+                <div class="search-row">
+                    <!-- Search Bar -->
+                    <div class="search-input-group">
+                        <input
+                            type="text"
+                            placeholder="Search anime by title, description..."
+                            class="search-input"
+                            value="Naruto"
+                        >
+                        <button type="submit" class="search-btn">🔍</button>
+                    </div>
+
+                    <!-- Clear Filters Button -->
+                    <button type="button" class="clear-filters-btn">Clear Filters</button>
+                </div>
+
+                <div class="filter-row">
+                    <!-- Genre Filter -->
+                    <div class="filter-group">
+                        <label for="genre">Genre:</label>
+                        <select class="filter-select" id="genre">
+                            <option value="">All Genres</option>
+                            <option value="Action" selected>Action</option>
+                            <option value="Adventure">Adventure</option>
+                            <option value="Comedy">Comedy</option>
+                            <option value="Drama">Drama</option>
+                            <option value="Fantasy">Fantasy</option>
+                            <option value="Romance">Romance</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="filter-group">
+                        <label for="status">Status:</label>
+                        <select class="filter-select" id="status">
+                            <option value="">All Statuses</option>
+                            <option value="Finished Airing" selected>Finished Airing</option>
+                            <option value="Airing">Airing</option>
+                            <option value="Not yet aired">Not yet aired</option>
+                        </select>
+                    </div>
+
+                    <!-- Type Filter -->
+                    <div class="filter-group">
+                        <label for="type">Type:</label>
+                        <select class="filter-select" id="type">
+                            <option value="">All Types</option>
+                            <option value="TV" selected>TV</option>
+                            <option value="Movie">Movie</option>
+                            <option value="OVA">OVA</option>
+                            <option value="ONA">ONA</option>
+                        </select>
+                    </div>
+
+                    <!-- Sort By -->
+                    <div class="filter-group">
+                        <label for="sort">Sort by:</label>
+                        <select class="filter-select" id="sort">
+                            <option value="score_desc">Highest Rated</option>
+                            <option value="popularity">Most Popular</option>
+                            <option value="title_asc">Title A-Z</option>
+                            <option value="newest" selected>Recently Added</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Summary -->
+        <div class="results-summary">
+            <p>
+                <strong>Found 2 anime</strong> matching "<strong>Naruto</strong>" in genre "<strong>Action</strong>" with status "<strong>Finished Airing</strong>"
+            </p>
+        </div>
+
+        <!-- Sample Results -->
+        <div class="results-section">
+            <div class="sample-results">
+                <div class="sample-card">
+                    <img src="./public/anime1.jpg" alt="Naruto" style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4);">
+                    <div class="sample-card-content">
+                        <h3>Naruto</h3>
+                        <p>A young ninja seeks recognition and dreams of becoming the Hokage, the leader of his village.</p>
+                    </div>
+                </div>
+
+                <div class="sample-card">
+                    <img src="./public/anime1.jpg" alt="Boruto: Naruto Next Generations" style="background: linear-gradient(45deg, #a8e6cf, #ffd3a5);">
+                    <div class="sample-card-content">
+                        <h3>Boruto: Naruto Next Generations</h3>
+                        <p>The story follows the next generation of ninjas, including Naruto's son Boruto.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       
+    <script>
+        // Demo JavaScript for interactivity
+        document.querySelector('.clear-filters-btn').addEventListener('click', function() {
+            document.querySelector('.search-input').value = '';
+            document.querySelectorAll('.filter-select').forEach(select => {
+                select.selectedIndex = 0;
+            });
+            alert('Filters cleared! (This is just a demo)');
+        });
+
+        // Simulate form submission
+        document.querySelector('.search-filter-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Search submitted! (This is just a demo - in the real app, this would refresh the results)');
+        });
+    </script>
+</body>
+</html>
