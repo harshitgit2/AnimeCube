@@ -231,7 +231,9 @@ if ($types_result) {
                 <a href="index.php" class="btn-back">← Back to All Anime</a>
 // Card.php - MyAnimeList API dynamic categories component
 // Checks if the user is logged in for routing
+
 $isLoggedIn = !empty($_SESSION["user_id"]) ? "true" : "false"; ?>
+
 
 <div class="mal-categories-container">
 
