@@ -1,10 +1,13 @@
 <?php
+// $host = "sql102.infinityfree.com";
+// $username = "if0_41332525";
+// $password = "siZgdyZB5Uvgo5m";
+// $dbname = "if0_41332525_anime_cube";
+//testing purpose
 $host = "localhost";
 $username = "root";
 $password = "";
-$dbname = "anime_cube";
-
-// Create connection to MySQL server first (without database)
+$dbname = "anime_cube"; // Create connection to MySQL server first (without database)
 $conn = new mysqli($host, $username, $password);
 
 if ($conn->connect_error) {
