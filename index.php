@@ -235,6 +235,9 @@ if (isset($_GET["login"])) {
             header("Location: index.php?login=true");
             exit();
         }
+    } elseif (isset($_GET["search"])) {
+        include "client/Search.php";
+    }
     } else {
          ?>
         <!-- Show main homepage with quotes and cards -->

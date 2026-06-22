@@ -83,6 +83,20 @@
         <?php } ?>
 
       </ul>
+
+      <div class="d-flex align-items-center">
+        <!-- Search Form -->
+        <form class="d-flex me-3" action="index.php" method="GET">
+            <input class="form-control me-2" type="search" placeholder="Search Anime" aria-label="Search" name="search" required>
+            <button class="btn btn-outline-light" type="submit">Search</button>
+        </form>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="btn btn-outline-light" title="Toggle Theme">
+          🌙
+        </button>
+      </div>
+
     </div>
   </div>
 </nav>

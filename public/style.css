@@ -98,3 +98,74 @@ button:hover {
     text-align: center;
     width: 200px;
 }
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+body.dark-mode .navbar {
+    background-color: #1f1f1f !important;
+}
+
+body.dark-mode .container,
+body.dark-mode .category-page-container,
+body.dark-mode .welcome-section,
+body.dark-mode .genre-container,
+body.dark-mode .cat-card,
+body.dark-mode .anime-card-mini,
+body.dark-mode .card,
+body.dark-mode .card-body,
+body.dark-mode .bg-white {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+}
+
+body.dark-mode .cat-title,
+body.dark-mode .card-mini-title,
+body.dark-mode .category-title,
+body.dark-mode .category-header h1,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode .results-title {
+    color: #fff !important;
+}
+
+body.dark-mode p,
+body.dark-mode .card-mini-desc,
+body.dark-mode .category-header p,
+body.dark-mode .text-muted {
+    color: #bbb !important;
+}
+
+body.dark-mode .genre-btn {
+    background: #2a2a2a;
+    color: #ddd;
+    border-color: #444;
+}
+
+body.dark-mode .genre-btn.active {
+    background: #667eea;
+    color: white;
+}
+
+body.dark-mode .form-control {
+    background-color: #2c2c2c;
+    color: #eee;
+    border-color: #444;
+}
+
+body.dark-mode .form-control::placeholder {
+    color: #aaa;
+}
+
+body.dark-mode .list-group-item {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-color: #333;
+}
